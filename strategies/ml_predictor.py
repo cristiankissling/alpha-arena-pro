@@ -226,9 +226,16 @@ class MLPredictor:
                 continue
 
         # Entrenar modelo final con todos los datos
-        if len(y.unique()) < 2:
+        try:
+            if len(y.unique()) < 2:
+                logger.warning(f"Solo una clase en dataset final {ticker}")
+                return {}
+            if not accuracies:
+                accuracies = [0.0]
+            model.fit(X_scaled, y)
+        except Exception as e:
+            logger.warning(f"Error en entrenamiento final {ticker}: {e}")
             return {}
-        model.fit(X_scaled, y)
 
         avg_accuracy = np.mean(accuracies)
         logger.info(f"✅ {ticker} — Accuracy CV: {avg_accuracy:.2%} | Features: {X.shape[1]}")
