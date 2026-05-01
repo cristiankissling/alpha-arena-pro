@@ -20,10 +20,6 @@ from config.settings import settings
 st.set_page_config(page_title="Alpha Arena Pro", page_icon="◈", layout="wide",
                    initial_sidebar_state="expanded")
 
-# Force sidebar open always
-if "sidebar_state" not in st.session_state:
-    st.session_state["sidebar_state"] = True
-
 st.markdown("""
 <!-- v5 -->
 <style>
@@ -72,22 +68,25 @@ html, body, .main, [data-testid="stAppViewContainer"] {
   margin-left: 0 !important;
   visibility: visible !important;
 }
-[data-testid="stSidebar"][aria-expanded="false"] {
-  transform: none !important;
-  margin-left: 0 !important;
-  width: 240px !important;
+/* Collapse/expand button - always visible and styled */
+[data-testid="stSidebarCollapsedControl"] {
+  display: flex !important;
+  background: var(--bg2) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 0 8px 8px 0 !important;
 }
-/* Hide every possible collapse button */
-[data-testid="stSidebarCollapsedControl"],
-[data-testid="collapsedControl"],
-[data-testid="stSidebarNavCollapseIcon"],
-button[aria-label="Close sidebar"],
-button[aria-label="Collapse sidebar"],
-.st-emotion-cache-dvne4q,
-.st-emotion-cache-1rtdyuf,
-.st-emotion-cache-pkbazv,
-.st-emotion-cache-eczf1o,
-.st-emotion-cache-1mi2ry5 { display: none !important; }
+[data-testid="stSidebarCollapsedControl"] button {
+  color: var(--cyan) !important;
+  background: transparent !important;
+  border: none !important;
+}
+[data-testid="collapsedControl"] {
+  display: flex !important;
+  background: var(--bg2) !important;
+  border: 1px solid var(--b1) !important;
+  border-radius: 0 8px 8px 0 !important;
+  color: var(--cyan) !important;
+}
 [data-testid="stSidebarCollapsedControl"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
 button[kind="header"] { display: none !important; }
