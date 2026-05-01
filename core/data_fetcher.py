@@ -176,8 +176,8 @@ class MarketDataFetcher:
 
         for ticker in all_tickers:
             try:
-                df = self.get_history(ticker, days=60)
-                if df.empty or len(df) < 20:
+                df = self.get_history(ticker, days=90)
+                if df.empty or len(df) < 30:
                     continue
 
                 quote = self.get_quote(ticker)
@@ -225,8 +225,10 @@ class MarketDataFetcher:
         mom_score = np.clip((ret_20d + 0.20) / 0.40, 0, 1)   # normalizado [-20%,+20%]→[0,1]
 
         # ── Volumen relativo ──────────────────────────────
-        avg_vol = vol.rolling(20).mean().iloc[-1] or 1
-        rel_vol = quote["volume"] / avg_vol if avg_vol > 0 else 1
+        avg_vol_series = vol.rolling(20).mean()
+        avg_vol = avg_vol_series.dropna().iloc[-1] if not avg_vol_series.dropna().empty else 0
+        avg_vol = avg_vol if avg_vol > 0 else 1
+        rel_vol = quote["volume"] / avg_vol if avg_vol > 0 else 1.0
         vol_score = np.clip(rel_vol / 3.0, 0, 1)              # 3x = máximo
 
         # ── RSI ───────────────────────────────────────────
@@ -246,7 +248,12 @@ class MarketDataFetcher:
             rsi_score = max(0, 1 - (rsi - 55) / 45)
 
         # ── Tendencia (precio vs SMA50) ────────────────────
-        sma50 = close.rolling(50).mean().iloc[-1]
+        sma50_series = close.rolling(50).mean()
+        sma50_valid = sma50_series.dropna()
+        if not sma50_valid.empty:
+            sma50 = sma50_valid.iloc[-1]
+        else:
+            sma50 = close.rolling(min(20, len(close))).mean().iloc[-1]
         trend_score = 1.0 if close.iloc[-1] > sma50 else 0.3
 
         # ── Breakout: precio cerca del máximo 20d ─────────

@@ -279,17 +279,25 @@ def get_ta(ticker):
     return {"signal":r.signal,"ta_score":r.ta_score,"confidence":r.confidence,
             "reasons":r.reasons,"indicators":r.indicators}
 
-@st.cache_data(ttl=600)
 def get_ml(ticker):
     from core.data_fetcher import data_fetcher
     from strategies.ml_predictor import ml_predictor
+    # Check session cache per ticker
+    cache_key = f"ml_result_{ticker}"
+    if cache_key in st.session_state:
+        return st.session_state[cache_key]
     df = data_fetcher.get_history(ticker, 500)
     if df.empty: return {}
-    if ml_predictor.needs_retraining(ticker):
-        ml_predictor.train(df, ticker)
-    p = ml_predictor.predict(df, ticker)
-    return {"signal":p.signal,"proba":p.probability,"accuracy":p.model_accuracy,
-            "features":p.features_used,"trained_at":p.trained_at}
+    try:
+        if ml_predictor.needs_retraining(ticker):
+            ml_predictor.train(df, ticker)
+        p = ml_predictor.predict(df, ticker)
+        result = {"signal":p.signal,"proba":p.probability,"accuracy":p.model_accuracy,
+                "features":p.features_used,"trained_at":p.trained_at}
+        st.session_state[cache_key] = result
+        return result
+    except Exception as e:
+        return {}
 
 @st.cache_data(ttl=300)
 def get_backtest(ticker, strategy, days):
@@ -570,7 +578,15 @@ def page_ml():
         </div>""", unsafe_allow_html=True)
         return
 
-    if btn: st.session_state["ml_ticker"] = ticker
+    if btn:
+        # Clear previous result when new ticker selected
+        old_ticker = st.session_state.get("ml_ticker", "")
+        if old_ticker != ticker:
+            cache_key = f"ml_result_{old_ticker}"
+            if cache_key in st.session_state:
+                del st.session_state[cache_key]
+        st.session_state["ml_ticker"] = ticker
+
     active = st.session_state.get("ml_ticker", ticker)
 
     with st.spinner(f"Entrenando modelo para {active}..."):
