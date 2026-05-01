@@ -1,0 +1,9 @@
+venv/
+data/
+logs/
+*.db
+*.pkl
+__pycache__/
+.env
+*.pyc
+data/models/
