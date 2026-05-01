@@ -183,37 +183,47 @@ class MLPredictor:
         X = combined.drop("target", axis=1)
         y = combined["target"]
 
+        # Validar que hay al menos 2 clases
+        if len(y.unique()) < 2:
+            logger.warning(f"Solo una clase en {ticker} — datos insuficientes para ML")
+            return {}
+
         # Escalar features
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
         # Time-series cross validation
-        tscv = TimeSeriesSplit(n_splits=5)
+        tscv = TimeSeriesSplit(n_splits=3)
         accuracies = []
 
         model = XGBClassifier(
-            n_estimators=200,
-            max_depth=5,
+            n_estimators=100,
+            max_depth=4,
             learning_rate=0.05,
             subsample=0.8,
             colsample_bytree=0.8,
-            min_child_weight=3,
+            min_child_weight=5,
             gamma=0.1,
             reg_alpha=0.1,
             reg_lambda=1.0,
-            use_label_encoder=False,
             eval_metric="mlogloss",
             random_state=42,
-            n_jobs=-1,
+            n_jobs=1,
             verbosity=0,
         )
 
         for train_idx, val_idx in tscv.split(X_scaled):
             X_tr, X_val = X_scaled[train_idx], X_scaled[val_idx]
             y_tr, y_val = y.iloc[train_idx], y.iloc[val_idx]
-            model.fit(X_tr, y_tr)
-            preds = model.predict(X_val)
-            accuracies.append(accuracy_score(y_val, preds))
+            if len(y_tr.unique()) < 2:
+                continue
+            try:
+                model.fit(X_tr, y_tr)
+                preds = model.predict(X_val)
+                accuracies.append(accuracy_score(y_val, preds))
+            except Exception as e:
+                logger.warning(f"Error en fold CV: {e}")
+                continue
 
         # Entrenar modelo final con todos los datos
         model.fit(X_scaled, y)
