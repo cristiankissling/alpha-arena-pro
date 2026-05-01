@@ -20,6 +20,10 @@ from config.settings import settings
 st.set_page_config(page_title="Alpha Arena Pro", page_icon="◈", layout="wide",
                    initial_sidebar_state="expanded")
 
+# Force sidebar open always
+if "sidebar_state" not in st.session_state:
+    st.session_state["sidebar_state"] = True
+
 st.markdown("""
 <!-- v5 -->
 <style>
@@ -63,12 +67,35 @@ html, body, .main, [data-testid="stAppViewContainer"] {
 [data-testid="stSidebar"] {
   background: var(--bg1) !important;
   border-right: 1px solid var(--b0) !important;
-  min-width: 220px !important;
+  min-width: 240px !important;
+  transform: none !important;
+  margin-left: 0 !important;
+  visibility: visible !important;
 }
+[data-testid="stSidebar"][aria-expanded="false"] {
+  transform: none !important;
+  margin-left: 0 !important;
+  width: 240px !important;
+}
+/* Hide every possible collapse button */
+[data-testid="stSidebarCollapsedControl"],
+[data-testid="collapsedControl"],
+[data-testid="stSidebarNavCollapseIcon"],
+button[aria-label="Close sidebar"],
+button[aria-label="Collapse sidebar"],
+.st-emotion-cache-dvne4q,
+.st-emotion-cache-1rtdyuf,
+.st-emotion-cache-pkbazv,
+.st-emotion-cache-eczf1o,
+.st-emotion-cache-1mi2ry5 { display: none !important; }
 [data-testid="stSidebarCollapsedControl"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
 button[kind="header"] { display: none !important; }
 .st-emotion-cache-dvne4q { display: none !important; }
+section[data-testid="stSidebar"] { transform: none !important; width: 240px !important; }
+section[data-testid="stSidebar"][aria-expanded="false"] { transform: none !important; margin-left: 0 !important; }
+.st-emotion-cache-1rtdyuf { display: none !important; }
+.st-emotion-cache-pkbazv { display: none !important; }
 
 /* Botones - estilo RaceWeekend: borde redondeado, outline */
 .stButton > button {
@@ -166,9 +193,9 @@ hr { border-color: var(--b0) !important; margin: 1.25rem 0 !important; }
 /* Table */
 .t { width:100%; border-collapse:collapse; }
 .t th { font-family:var(--fm); font-size:0.58rem; letter-spacing:0.1em; color:var(--t3);
-        text-transform:uppercase; padding:0.5rem 0.9rem; border-bottom:1px solid var(--b0); text-align:right; }
+        text-transform:uppercase; padding:0.22rem 0.9rem; border-bottom:1px solid var(--b0); text-align:right; }
 .t th:first-child { text-align:left; }
-.t td { font-family:var(--fm); font-size:0.78rem; color:var(--t1); padding:0.6rem 0.9rem;
+.t td { font-family:var(--fm); font-size:0.78rem; color:var(--t1); padding:0.22rem 0.9rem;
         border-bottom:1px solid var(--b0); text-align:right; }
 .t td:first-child { text-align:left; }
 .t tr:last-child td { border-bottom:none; }
