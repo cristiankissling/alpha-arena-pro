@@ -39,14 +39,14 @@ st.markdown("""
   --bg-hover:      #1c2035;
   --border:        rgba(255,255,255,0.06);
   --border-bright: rgba(255,255,255,0.12);
-  --accent-green:  #00e5a0;
-  --accent-green2: #00c87a;
+  --accent-green:  #2dd4bf;
+  --accent-green2: #14b8a6;
   --accent-violet: #7c6cfa;
   --accent-amber:  #f5a623;
   --accent-red:    #ff4d6a;
   --text-primary:  #eef0f8;
-  --text-secondary:#8b90a8;
-  --text-muted:    #4a4f6a;
+  --text-secondary:#a8adc4;
+  --text-muted:    #6b7190;
   --font-display:  'Syne', sans-serif;
   --font-mono:     'DM Mono', monospace;
   --font-body:     'DM Sans', sans-serif;
@@ -148,7 +148,7 @@ html, body, .main, [data-testid="stAppViewContainer"] {
   text-transform: uppercase;
 }
 .mb-merval { background:rgba(124,108,250,0.12);color:var(--accent-violet);border:1px solid rgba(124,108,250,0.25); }
-.mb-cedear { background:rgba(0,229,160,0.08);color:var(--accent-green);border:1px solid rgba(0,229,160,0.2); }
+.mb-cedear { background:rgba(45,212,191,0.08);color:var(--accent-green);border:1px solid rgba(45,212,191,0.2); }
 
 .t-head {
   display: grid;
@@ -179,7 +179,7 @@ html, body, .main, [data-testid="stAppViewContainer"] {
 .t-name { font-size:0.68rem;color:var(--text-muted);margin-top:1px; }
 .t-px { font-family:var(--font-mono);font-size:0.82rem;color:var(--text-primary);text-align:right; }
 .t-chg { font-family:var(--font-mono);font-size:0.75rem;font-weight:500;text-align:right;padding:2px 7px;border-radius:4px;display:inline-block; }
-.cup  { color:var(--accent-green);background:rgba(0,229,160,0.08); }
+.cup  { color:var(--accent-green);background:rgba(45,212,191,0.08); }
 .cdown{ color:var(--accent-red);background:rgba(255,77,106,0.08); }
 .cflat{ color:var(--text-muted);background:rgba(255,255,255,0.04); }
 
@@ -203,7 +203,7 @@ html, body, .main, [data-testid="stAppViewContainer"] {
 .sc-ticker { font-family:var(--font-display);font-size:1.05rem;font-weight:700;color:var(--text-primary); }
 .sc-mkt { font-size:0.67rem;color:var(--text-muted);margin-top:2px; }
 .sbadge { font-family:var(--font-mono);font-size:0.68rem;font-weight:500;padding:3px 9px;border-radius:5px;letter-spacing:0.05em; }
-.sb-buy  { background:rgba(0,229,160,0.1);color:var(--accent-green);border:1px solid rgba(0,229,160,0.25); }
+.sb-buy  { background:rgba(45,212,191,0.1);color:var(--accent-green);border:1px solid rgba(45,212,191,0.25); }
 .sb-sell { background:rgba(255,77,106,0.1);color:var(--accent-red);border:1px solid rgba(255,77,106,0.25); }
 .sb-hold { background:rgba(245,166,35,0.08);color:var(--accent-amber);border:1px solid rgba(245,166,35,0.2); }
 
@@ -471,8 +471,8 @@ def page_scanner():
     for _, row in df.head(3).iterrows():
         lbl, cls, bcls = classify(row['rsi'])
         sp = int(row['score']*100)
-        sc = "#00e5a0" if cls=="buy" else ("#ff4d6a" if cls=="sell" else "#f5a623")
-        cc = "#00e5a0" if row['change']>=0 else "#ff4d6a"
+        sc = "#2dd4bf" if cls=="buy" else ("#ff4d6a" if cls=="sell" else "#f5a623")
+        cc = "#2dd4bf" if row['change']>=0 else "#ff4d6a"
         sg = "+" if row['change']>=0 else ""
         st.markdown(f"""
         <div class="sc {cls}">
@@ -506,8 +506,8 @@ def page_scanner():
     disp.columns = ["Ticker","Mercado","Precio","Cambio%","Score","RSI","Ret5d%","Ret20d%","Vol×","vsSMA50%"]
 
     styled = (disp.style
-        .map(lambda v: ("background:#0d2818;color:#00e5a0" if v>=0.6 else "background:#1a1a0a;color:#f5a623" if v>=0.4 else "background:#2d0a0a;color:#ff4d6a") if isinstance(v,float) and 0<=v<=1 else "", subset=["Score"])
-        .map(lambda v: f"color:{'#00e5a0' if v>=0 else '#ff4d6a'}" if isinstance(v,(int,float)) else "", subset=["Cambio%","Ret5d%","Ret20d%","vsSMA50%"])
+        .map(lambda v: ("background:#0d2818;color:#2dd4bf" if v>=0.6 else "background:#1a1a0a;color:#f5a623" if v>=0.4 else "background:#2d0a0a;color:#ff4d6a") if isinstance(v,float) and 0<=v<=1 else "", subset=["Score"])
+        .map(lambda v: f"color:{'#2dd4bf' if v>=0 else '#ff4d6a'}" if isinstance(v,(int,float)) else "", subset=["Cambio%","Ret5d%","Ret20d%","vsSMA50%"])
         .format({"Precio":"${:,.2f}","Cambio%":"{:+.2f}%","Score":"{:.0%}","RSI":"{:.0f}",
                  "Ret5d%":"{:+.1f}%","Ret20d%":"{:+.1f}%","Vol×":"{:.1f}x","vsSMA50%":"{:+.1f}%"}, na_rep="—"))
     st.dataframe(styled, use_container_width=True, hide_index=True)
@@ -515,7 +515,7 @@ def page_scanner():
     df["Señal"] = df["rsi"].apply(lambda r: "BUY" if 25<r<45 else ("SELL" if r>65 else "HOLD"))
     fig = px.scatter(df, x="ret_20d", y="score", size="rel_volume", color="Señal",
         hover_data=["ticker","rsi","price"],
-        color_discrete_map={"BUY":"#00e5a0","SELL":"#ff4d6a","HOLD":"#f5a623"},
+        color_discrete_map={"BUY":"#2dd4bf","SELL":"#ff4d6a","HOLD":"#f5a623"},
         labels={"ret_20d":"Retorno 20d (%)","score":"Score"})
     fig.add_vline(x=0, line_dash="dash", line_color="rgba(255,255,255,0.08)")
     fig.add_hline(y=0.5, line_dash="dash", line_color="rgba(255,255,255,0.08)")
@@ -582,7 +582,7 @@ def page_analysis():
 
     fig.add_trace(go.Candlestick(x=df.index,open=df["Open"],high=df["High"],low=df["Low"],close=df["Close"],
         name="",showlegend=False,
-        increasing=dict(line=dict(color="#00e5a0"),fillcolor="rgba(0,229,160,0.75)"),
+        increasing=dict(line=dict(color="#2dd4bf"),fillcolor="rgba(45,212,191,0.75)"),
         decreasing=dict(line=dict(color="#ff4d6a"),fillcolor="rgba(255,77,106,0.75)")),row=1,col=1)
 
     if "bb_upper" in df_i.columns:
@@ -601,19 +601,19 @@ def page_analysis():
                 line=dict(color=color,width=1.2),name=ema.upper()),row=1,col=1)
 
     if "macd" in df_i.columns:
-        fig.add_trace(go.Scatter(x=df_i.index,y=df_i["macd"],line=dict(color="#00e5a0",width=1.5),name="MACD"),row=2,col=1)
+        fig.add_trace(go.Scatter(x=df_i.index,y=df_i["macd"],line=dict(color="#2dd4bf",width=1.5),name="MACD"),row=2,col=1)
         fig.add_trace(go.Scatter(x=df_i.index,y=df_i["macd_signal"],line=dict(color="#f5a623",width=1.5),name="Signal"),row=2,col=1)
-        ch = ["#00e5a0" if v>=0 else "#ff4d6a" for v in df_i["macd_hist"].fillna(0)]
+        ch = ["#2dd4bf" if v>=0 else "#ff4d6a" for v in df_i["macd_hist"].fillna(0)]
         fig.add_trace(go.Bar(x=df_i.index,y=df_i["macd_hist"],marker_color=ch,showlegend=False),row=2,col=1)
 
     if "rsi" in df_i.columns:
         fig.add_trace(go.Scatter(x=df_i.index,y=df_i["rsi"],
             line=dict(color="#7c6cfa",width=1.8),showlegend=False),row=3,col=1)
         fig.add_hline(y=70,line_dash="dot",line_color="rgba(255,77,106,0.35)",row=3,col=1)
-        fig.add_hline(y=30,line_dash="dot",line_color="rgba(0,229,160,0.35)",row=3,col=1)
+        fig.add_hline(y=30,line_dash="dot",line_color="rgba(45,212,191,0.35)",row=3,col=1)
         fig.add_hrect(y0=30,y1=70,fillcolor="rgba(255,255,255,0.015)",line_width=0,row=3,col=1)
 
-    vc = ["#00e5a0" if c>=o else "#ff4d6a" for c,o in zip(df["Close"],df["Open"])]
+    vc = ["#2dd4bf" if c>=o else "#ff4d6a" for c,o in zip(df["Close"],df["Open"])]
     fig.add_trace(go.Bar(x=df.index,y=df["Volume"],marker_color=vc,showlegend=False),row=4,col=1)
 
     fig.update_layout(**PLOTLY_THEME,height=820,xaxis_rangeslider_visible=False,
@@ -665,8 +665,8 @@ def page_ml():
     sig   = res.get("signal","HOLD")
     proba = res.get("proba",0)
     acc   = res.get("accuracy",0)
-    sc    = {"BUY":"#00e5a0","SELL":"#ff4d6a","HOLD":"#f5a623"}.get(sig,"#f5a623")
-    bg    = {"BUY":"rgba(0,229,160,0.06)","SELL":"rgba(255,77,106,0.06)","HOLD":"rgba(245,166,35,0.06)"}.get(sig)
+    sc    = {"BUY":"#2dd4bf","SELL":"#ff4d6a","HOLD":"#f5a623"}.get(sig,"#f5a623")
+    bg    = {"BUY":"rgba(45,212,191,0.06)","SELL":"rgba(255,77,106,0.06)","HOLD":"rgba(245,166,35,0.06)"}.get(sig)
 
     st.markdown(f"""
     <div style="background:{bg};border:1px solid {sc}33;border-radius:12px;
@@ -749,7 +749,7 @@ def page_backtest():
     if eq is not None and not eq.empty:
         fig = make_subplots(rows=2,cols=1,shared_xaxes=True,vertical_spacing=0.04,row_heights=[0.70,0.30])
         fig.add_trace(go.Scatter(x=eq.index,y=eq.values,fill="tozeroy",
-            line=dict(color="#00e5a0",width=2),fillcolor="rgba(0,229,160,0.06)",name="Capital"),row=1,col=1)
+            line=dict(color="#2dd4bf",width=2),fillcolor="rgba(45,212,191,0.06)",name="Capital"),row=1,col=1)
         fig.add_hline(y=settings.initial_capital,line_dash="dot",line_color="rgba(255,255,255,0.12)",row=1,col=1)
         if dd is not None and not dd.empty:
             fig.add_trace(go.Scatter(x=dd.index,y=dd.values,fill="tozeroy",
@@ -764,7 +764,7 @@ def page_backtest():
                  "$ Entrada":round(t.entry_price,2),"$ Salida":round(t.exit_price,2),
                  "P&L $":round(t.pnl,2),"P&L %":round(t.pnl_pct,2)} for t in trades[-50:]]
         df_t = pd.DataFrame(rows)
-        styled = df_t.style.map(lambda v: f"color:{'#00e5a0' if v>=0 else '#ff4d6a'}" if isinstance(v,(int,float)) else "", subset=["P&L $","P&L %"])
+        styled = df_t.style.map(lambda v: f"color:{'#2dd4bf' if v>=0 else '#ff4d6a'}" if isinstance(v,(int,float)) else "", subset=["P&L $","P&L %"])
         st.dataframe(styled, use_container_width=True, hide_index=True)
 
 
