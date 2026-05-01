@@ -226,6 +226,8 @@ class MLPredictor:
                 continue
 
         # Entrenar modelo final con todos los datos
+        if len(y.unique()) < 2:
+            return {}
         model.fit(X_scaled, y)
 
         avg_accuracy = np.mean(accuracies)
