@@ -59,11 +59,16 @@ html, body, .main, [data-testid="stAppViewContainer"] {
 #MainMenu, footer, header, [data-testid="stToolbar"] { display:none !important; }
 .block-container { padding:1.5rem 2rem 3rem !important; max-width:100% !important; }
 
-/* Sidebar */
+/* Sidebar - always visible, no collapse */
 [data-testid="stSidebar"] {
   background: var(--bg1) !important;
   border-right: 1px solid var(--b0) !important;
+  min-width: 220px !important;
 }
+[data-testid="stSidebarCollapsedControl"] { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
+button[kind="header"] { display: none !important; }
+.st-emotion-cache-dvne4q { display: none !important; }
 
 /* Botones - estilo RaceWeekend: borde redondeado, outline */
 .stButton > button {
@@ -337,6 +342,26 @@ def _tbl(tickers, label, bcls):
     if not rows:
         st.warning("Sin datos."); return
 
+    # Build entire table in ONE markdown call to avoid HTML fragmentation
+    tbody = ""
+    for ticker, q in rows:
+        chg = q["change"]
+        cls = "up" if chg>0 else ("dn" if chg<0 else "nt")
+        sign = "+" if chg>0 else ""
+        v = q["volume"]
+        vs = f"{v/1e6:.1f}M" if v>1e6 else (f"{v/1e3:.0f}K" if v>1000 else str(v))
+        tbody += f"""<tr>
+          <td style="text-align:left">
+            <span style="color:var(--t1);font-weight:600">{ticker.replace(".BA","")}</span>
+            <span style="color:var(--t3);font-size:0.65rem;margin-left:6px">{ticker}</span>
+          </td>
+          <td style="color:var(--cyan);text-align:right">${q["price"]:,.2f}</td>
+          <td style="text-align:right"><span class="{cls}">{sign}{chg:.2f}%</span></td>
+          <td style="text-align:right">${q["high"]:,.2f}</td>
+          <td style="text-align:right">${q["low"]:,.2f}</td>
+          <td style="color:var(--t2);text-align:right">{vs}</td>
+        </tr>"""
+
     st.markdown(f"""
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
@@ -344,35 +369,21 @@ def _tbl(tickers, label, bcls):
           <span class="badge {bcls}">{label}</span>
           <span style="font-family:var(--fm);font-size:0.68rem;color:var(--t2)">{len(rows)} activos</span>
         </div>
-        <span style="font-family:var(--fm);font-size:0.6rem;color:var(--t3)">{datetime.now().strftime('%H:%M:%S')}</span>
+        <span style="font-family:var(--fm);font-size:0.6rem;color:var(--t3)">{datetime.now().strftime("%H:%M:%S")}</span>
       </div>
       <table class="t">
         <thead><tr>
-          <th style="text-align:left">Ticker</th>
-          <th>Precio</th><th>Cambio</th><th>Máximo</th><th>Mínimo</th><th>Volumen</th>
-        </tr></thead><tbody>
+          <th style="text-align:left;width:20%">Ticker</th>
+          <th style="text-align:right;width:15%">Precio</th>
+          <th style="text-align:right;width:12%">Cambio</th>
+          <th style="text-align:right;width:15%">Máximo</th>
+          <th style="text-align:right;width:15%">Mínimo</th>
+          <th style="text-align:right;width:10%">Volumen</th>
+        </tr></thead>
+        <tbody>{tbody}</tbody>
+      </table>
+    </div>
     """, unsafe_allow_html=True)
-
-    for ticker, q in rows:
-        chg = q['change']
-        cls = "up" if chg>0 else ("dn" if chg<0 else "nt")
-        sign = "+" if chg>0 else ""
-        v = q['volume']
-        vs = f"{v/1e6:.1f}M" if v>1e6 else (f"{v/1e3:.0f}K" if v>1000 else str(v))
-        st.markdown(f"""
-        <tr>
-          <td style="text-align:left">
-            <span style="color:var(--t1);font-weight:500">{ticker.replace('.BA','')}</span>
-            <span style="color:var(--t3);font-size:0.68rem;margin-left:6px">{ticker}</span>
-          </td>
-          <td style="color:var(--cyan)">${q['price']:,.2f}</td>
-          <td><span class="{cls}">{sign}{chg:.2f}%</span></td>
-          <td>${q['high']:,.2f}</td>
-          <td>${q['low']:,.2f}</td>
-          <td style="color:var(--t2)">{vs}</td>
-        </tr>""", unsafe_allow_html=True)
-
-    st.markdown("</tbody></table></div>", unsafe_allow_html=True)
 
 
 def page_scanner():
