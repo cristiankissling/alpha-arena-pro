@@ -146,12 +146,13 @@ class MLPredictor:
         feature_cols = [c for c in df.columns if c not in ["Open","High","Low","Close","Volume","Dividends","Stock Splits"]]
         return df[feature_cols]
 
-    def build_target(self, df: pd.DataFrame, forward_days: int = 5, threshold: float = 0.02) -> pd.Series:
+    def build_target(self, df: pd.DataFrame, forward_days: int = 5, threshold: float = 0.015) -> pd.Series:
         """
         Target:
          1 → precio sube >threshold en forward_days
         -1 → precio baja >threshold
          0 → neutral
+        Umbral reducido a 1.5% para más muestras de BUY/SELL.
         """
         future_ret = df["Close"].shift(-forward_days) / df["Close"] - 1
         target = pd.Series(0, index=df.index, dtype=int)
@@ -176,35 +177,45 @@ class MLPredictor:
         combined = pd.concat([features_df, target.rename("target")], axis=1).dropna()
         combined = combined[:-5]  # Eliminar últimas filas (target futuro no disponible)
 
-        if len(combined) < 80:
+        if len(combined) < 60:
             logger.warning(f"Muy pocos datos limpios para {ticker}: {len(combined)}")
             return {}
 
         X = combined.drop("target", axis=1)
         y = combined["target"]
 
-        # Validar que hay al menos 2 clases
+        # Si solo hay una clase, intentar con umbral más bajo
         if len(y.unique()) < 2:
-            logger.warning(f"Solo una clase en {ticker} — datos insuficientes para ML")
-            return {}
+            logger.warning(f"Solo una clase en {ticker} — intentando con umbral 0.5%")
+            target2 = self.build_target(df, threshold=0.005)
+            combined2 = pd.concat([features_df, target2.rename("target")], axis=1).dropna()
+            combined2 = combined2[:-5]
+            if len(combined2) >= 60 and len(combined2["target"].unique()) >= 2:
+                combined = combined2
+                X = combined.drop("target", axis=1)
+                y = combined["target"]
+            else:
+                logger.warning(f"No se pudo balancear clases para {ticker}")
+                return {}
 
         # Escalar features
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
-        # Time-series cross validation
-        tscv = TimeSeriesSplit(n_splits=3)
+        # Time-series cross validation - fewer splits for smaller datasets
+        n_splits = 2 if len(X) < 150 else 3
+        tscv = TimeSeriesSplit(n_splits=n_splits)
         accuracies = []
 
         model = XGBClassifier(
-            n_estimators=100,
-            max_depth=4,
-            learning_rate=0.05,
+            n_estimators=80,
+            max_depth=3,
+            learning_rate=0.08,
             subsample=0.8,
             colsample_bytree=0.8,
-            min_child_weight=5,
-            gamma=0.1,
-            reg_alpha=0.1,
+            min_child_weight=3,
+            gamma=0.0,
+            reg_alpha=0.05,
             reg_lambda=1.0,
             eval_metric="mlogloss",
             random_state=42,
