@@ -73,11 +73,17 @@ class MarketDataFetcher:
             prev  = float(hist["Close"].iloc[-2]) if len(hist) > 1 else price
             chg   = (price - prev) / prev * 100 if prev else 0
 
+            # Volume: use last non-zero value (market may be closed)
+            vol = 0
+            if "Volume" in hist.columns:
+                vol_series = hist["Volume"].replace(0, np.nan).dropna()
+                vol = int(vol_series.iloc[-1]) if not vol_series.empty else 0
+
             result = {
                 "ticker":   ticker,
                 "price":    round(price, 2),
                 "change":   round(chg, 2),
-                "volume":   int(hist["Volume"].iloc[-1]) if "Volume" in hist.columns else 0,
+                "volume":   vol,
                 "high":     round(float(hist["High"].max()), 2),
                 "low":      round(float(hist["Low"].min()), 2),
                 "open":     round(float(hist["Open"].iloc[0]), 2),

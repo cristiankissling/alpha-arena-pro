@@ -281,23 +281,46 @@ def get_ta(ticker):
 
 def get_ml(ticker):
     from core.data_fetcher import data_fetcher
-    from strategies.ml_predictor import ml_predictor
-    # Check session cache per ticker
+    from strategies.ml_predictor import MLPredictor
+    import numpy as np
+
     cache_key = f"ml_result_{ticker}"
     if cache_key in st.session_state:
         return st.session_state[cache_key]
+
     df = data_fetcher.get_history(ticker, 500)
-    if df.empty: return {}
+    if df.empty or len(df) < 100:
+        return {"error": "datos insuficientes", "n_rows": len(df) if not df.empty else 0}
+
+    # Crear instancia fresca — en cloud no hay persistencia en disco
+    predictor = MLPredictor()
+
     try:
-        if ml_predictor.needs_retraining(ticker):
-            ml_predictor.train(df, ticker)
-        p = ml_predictor.predict(df, ticker)
-        result = {"signal":p.signal,"proba":p.probability,"accuracy":p.model_accuracy,
-                "features":p.features_used,"trained_at":p.trained_at}
+        # Entrenar siempre en cloud (no hay modelos guardados)
+        meta = predictor.train(df, ticker)
+        if not meta:
+            return {"error": f"entrenamiento fallido — filas: {len(df)}"}
+
+        pred = predictor.predict(df, ticker)
+
+        # Verificar que el resultado es válido
+        if pred.probability == 0.0 and pred.signal == "HOLD" and pred.model_accuracy == 0.0:
+            return {"error": "predicción inválida — modelo no convergió"}
+
+        result = {
+            "signal": pred.signal,
+            "proba": pred.probability,
+            "accuracy": pred.model_accuracy,
+            "features": pred.features_used,
+            "trained_at": pred.trained_at,
+            "n_samples": meta.get("n_samples", 0),
+            "class_dist": meta.get("class_distribution", {}),
+        }
         st.session_state[cache_key] = result
         return result
+
     except Exception as e:
-        return {}
+        return {"error": str(e)}
 
 @st.cache_data(ttl=300)
 def get_backtest(ticker, strategy, days):
@@ -589,27 +612,43 @@ def page_ml():
 
     active = st.session_state.get("ml_ticker", ticker)
 
-    with st.spinner(f"Entrenando modelo para {active}..."):
+    with st.spinner(f"Entrenando modelo para {active}... (puede tardar 1-2 min)"):
         res = get_ml(active)
 
-    if not res: st.error("Datos insuficientes."); return
+    if not res:
+        st.error("Sin respuesta del modelo.")
+        return
 
-    sig = res.get("signal","HOLD"); proba = res.get("proba",0); acc = res.get("accuracy",0)
-    clrs = {"BUY":("var(--green)","rgba(74,222,128,0.06)","rgba(74,222,128,0.2)"),
-            "SELL":("var(--red)","rgba(248,113,113,0.06)","rgba(248,113,113,0.2)"),
-            "HOLD":("var(--amber)","rgba(251,191,36,0.06)","rgba(251,191,36,0.2)")}
-    color,bg,border = clrs.get(sig,clrs["HOLD"])
+    if "error" in res:
+        st.error(f"No se pudo generar predicción: {res['error']}")
+        st.info(f"Filas de datos disponibles: {res.get('n_rows', '?')} — se necesitan al menos 100.")
+        return
+
+    sig   = res.get("signal", "HOLD")
+    proba = res.get("proba", 0)
+    acc   = res.get("accuracy", 0)
+    clrs  = {
+        "BUY":  ("var(--green)", "rgba(74,222,128,0.06)",  "rgba(74,222,128,0.2)"),
+        "SELL": ("var(--red)",   "rgba(248,113,113,0.06)", "rgba(248,113,113,0.2)"),
+        "HOLD": ("var(--amber)", "rgba(251,191,36,0.06)",  "rgba(251,191,36,0.2)"),
+    }
+    color, bg, border = clrs.get(sig, clrs["HOLD"])
+
+    # Distribución de clases para transparencia
+    class_dist = res.get("class_dist", {})
+    n_samples  = res.get("n_samples", 0)
 
     st.markdown(f"""
     <div class="mlb" style="background:{bg};border:1px solid {border}">
       <div>
         <div style="font-family:var(--fm);font-size:0.56rem;color:var(--t3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px">Predicción ML · {active}</div>
         <div class="ml-s" style="color:{color}">{sig}</div>
+        <div style="font-family:var(--fm);font-size:0.6rem;color:var(--t3);margin-top:4px">{n_samples} muestras de entrenamiento</div>
       </div>
       <div class="ml-g">
         <div class="ml-i"><div class="ml-il">Confianza</div><div class="ml-iv" style="color:{color}">{proba:.0%}</div></div>
         <div class="ml-i"><div class="ml-il">Accuracy CV</div><div class="ml-iv" style="color:var(--t1)">{acc:.1%}</div></div>
-        <div class="ml-i"><div class="ml-il">Features</div><div class="ml-iv" style="color:var(--t1)">{res.get('features',0)}</div></div>
+        <div class="ml-i"><div class="ml-il">Features</div><div class="ml-iv" style="color:var(--t1)">{res.get("features",0)}</div></div>
       </div>
     </div>
     <div class="warn">⚠ Predicciones probabilísticas — siempre combinar con análisis técnico y gestión de riesgo</div>
