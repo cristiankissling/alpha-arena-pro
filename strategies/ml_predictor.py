@@ -182,7 +182,12 @@ class MLPredictor:
             return {}
 
         X = combined.drop("target", axis=1)
-        y = combined["target"]
+        y_raw = combined["target"]
+
+        # Mapear clases -1,0,1 → 0,1,2 (XGBoost no acepta clases negativas)
+        class_map = {-1: 0, 0: 1, 1: 2}
+        class_map_inv = {0: -1, 1: 0, 2: 1}
+        y = y_raw.map(class_map)
 
         # Si solo hay una clase, intentar con umbral más bajo
         if len(y.unique()) < 2:
@@ -262,7 +267,8 @@ class MLPredictor:
             "n_samples":    len(combined),
             "n_features":   X.shape[1],
             "feature_names": list(X.columns),
-            "class_distribution": y.value_counts().to_dict(),
+            "class_distribution": y_raw.value_counts().to_dict(),
+            "class_map": class_map,
         }
         self.metadata[ticker] = meta
         self._save_model(ticker, model, scaler, meta)
@@ -313,13 +319,14 @@ class MLPredictor:
             pred_class  = model.predict(X)[0]
             pred_proba  = model.predict_proba(X)[0]
 
-            # Mapa clase → señal
-            classes = model.classes_
-            class_map = {-1: "SELL", 0: "HOLD", 1: "BUY"}
-            signal = class_map.get(int(pred_class), "HOLD")
+            # Remapear clase predicha: 0,1,2 → -1,0,1 → señal
+            class_map_inv = {0: -1, 1: 0, 2: 1}
+            original_class = class_map_inv.get(int(pred_class), 0)
+            signal_map = {-1: "SELL", 0: "HOLD", 1: "BUY"}
+            signal = signal_map.get(original_class, "HOLD")
 
             # Confianza: probabilidad de la clase predicha
-            prob_idx = list(classes).index(pred_class)
+            prob_idx = list(model.classes_).index(pred_class)
             confidence = float(pred_proba[prob_idx])
 
             # Retorno esperado aproximado

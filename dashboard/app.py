@@ -620,31 +620,7 @@ def page_ml():
         return
 
     if "error" in res:
-        st.error(f"Error: {res['error']}")
-        # Show debug info
-        from core.data_fetcher import data_fetcher
-        from strategies.ml_predictor import MLPredictor
-        df_debug = data_fetcher.get_history(active, 500)
-        st.code(f"""
-Debug info para {active}:
-- Filas históricas: {len(df_debug)}
-- Columnas: {list(df_debug.columns) if not df_debug.empty else 'N/A'}
-- Fecha inicio: {df_debug.index[0] if not df_debug.empty else 'N/A'}
-- Fecha fin: {df_debug.index[-1] if not df_debug.empty else 'N/A'}
-        """)
-        if not df_debug.empty:
-            # Try to show target distribution
-            predictor = MLPredictor()
-            features = predictor.build_features(df_debug)
-            target = predictor.build_target(df_debug)
-            combined = pd.concat([features, target.rename("target")], axis=1).dropna()
-            combined = combined[:-5]
-            st.code(f"""
-- Filas features: {len(features)}
-- Filas combined (sin NaN): {len(combined)}
-- Distribución target: {combined["target"].value_counts().to_dict() if len(combined) > 0 else 'N/A'}
-- Clases únicas: {combined["target"].unique().tolist() if len(combined) > 0 else 'N/A'}
-            """)
+        st.error(f"No se pudo generar predicción: {res['error']}")
         return
 
     sig   = res.get("signal", "HOLD")
