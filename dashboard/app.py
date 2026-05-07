@@ -337,6 +337,37 @@ def get_backtest(ticker, strategy, days):
         return {"error":str(e)}
 
 
+def ticker_selector(key: str = "ticker") -> str:
+    """Selector de ticker: dropdown predefinido + campo libre."""
+    all_t = settings.merval_universe + settings.cedear_universe
+    
+    col1, col2 = st.columns([3, 2])
+    with col1:
+        selected = st.selectbox("Activo del universo", all_t, key=f"{key}_select")
+    with col2:
+        custom = st.text_input(
+            "O escribí cualquier ticker",
+            placeholder="Ej: VIST, LOMA, TSLA, MELI...",
+            key=f"{key}_custom"
+        ).strip().upper()
+    
+    if custom:
+        # Validate ticker exists in yfinance
+        try:
+            import yfinance as yf
+            test = yf.Ticker(custom)
+            hist = test.history(period="5d")
+            if not hist.empty:
+                return custom
+            else:
+                st.warning(f"⚠ No se encontraron datos para '{custom}'. Verificá el ticker.")
+                return selected
+        except Exception:
+            st.warning(f"⚠ Ticker '{custom}' no válido.")
+            return selected
+    return selected
+
+
 def ph(title, sub):
     st.markdown(f"""
     <div class="ph">
@@ -513,13 +544,11 @@ def page_scanner():
 
 def page_analysis():
     ph("Análisis Técnico", "RSI · MACD · Bollinger · EMA20/50/200 · Stochastic · ADX")
-    all_t = settings.merval_universe + settings.cedear_universe
-    c1,c2,c3 = st.columns([3,1,1])
-    with c1: ticker = st.selectbox("Activo", all_t)
-    with c2: period = st.selectbox("Período", ["3M","6M","1A","2A"])
-    with c3:
-        st.write(""); st.write("")
-        st.button("Analizar", use_container_width=True)
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        ticker = ticker_selector("analysis")
+    with c2:
+        period = st.selectbox("Período", ["3M","6M","1A","2A"])
     days = {"3M":90,"6M":180,"1A":365,"2A":730}[period]
 
     with st.spinner(""):
@@ -587,9 +616,9 @@ def page_analysis():
 
 def page_ml():
     ph("ML Predictor", "XGBoost · 30+ Features · Time-Series CV · Horizonte 5 días")
-    all_t = settings.merval_universe + settings.cedear_universe
-    c1,c2 = st.columns([3,1])
-    with c1: ticker = st.selectbox("Activo", all_t)
+    c1, c2 = st.columns([3, 1])
+    with c1:
+        ticker = ticker_selector("ml")
     with c2:
         st.write(""); st.write("")
         btn = st.button("⬡ Predecir", use_container_width=True)
@@ -656,9 +685,8 @@ def page_ml():
 
 def page_backtest():
     ph("Backtest", "Sharpe · Sortino · Max Drawdown · Win Rate · Profit Factor")
-    all_t = settings.merval_universe + settings.cedear_universe
     c1,c2,c3,c4 = st.columns(4)
-    with c1: ticker = st.selectbox("Activo", all_t)
+    with c1: ticker = ticker_selector("backtest")
     with c2:
         strat = st.selectbox("Estrategia",["technical","momentum","mean_reversion"],
             format_func=lambda x:{"technical":"Análisis Técnico","momentum":"Momentum","mean_reversion":"Mean Reversion"}[x])
